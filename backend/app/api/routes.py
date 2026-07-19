@@ -6,7 +6,7 @@ router = APIRouter()
 @router.get("/")
 def root():
     return {
-        "application": "LuMa",
+        "application": "Viumsa",
         "version": "0.1.0",
         "status": "running"
     }
