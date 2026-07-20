@@ -22,3 +22,5 @@ frontend/node_modules/
 # Build folders
 dist/
 build/
+# Local database
+backend/viumsa.db
