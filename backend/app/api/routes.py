@@ -32,7 +32,8 @@ class MessageResponse(BaseModel):
     id: int
     role: str
     content: str
-
+class RenameConversationRequest(BaseModel):
+    title: str
 @router.get("/")
 def root():
     return {
@@ -57,7 +58,10 @@ async def chat(
 
     # If there is no conversation yet, create one.
     if request.conversation_id is None:
-        title = message[:60]
+        title = message[:40].strip()
+
+        if len(message) > 40:
+            title += "..."
 
         conversation = ConversationService.create_conversation(
             db=db,
@@ -165,3 +169,53 @@ def get_conversation_messages(
         )
         for message in messages
     ]
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db)
+):
+    deleted = ConversationService.delete_conversation(
+        db=db,
+        conversation_id=conversation_id
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found"
+        )
+
+    return {
+        "message": "Conversation deleted successfully"
+    }
+
+@router.patch("/conversations/{conversation_id}")
+def rename_conversation(
+    conversation_id: int,
+    request: RenameConversationRequest,
+    db: Session = Depends(get_db)
+):
+    title = request.title.strip()
+
+    if not title:
+        raise HTTPException(
+            status_code=400,
+            detail="Title cannot be empty"
+        )
+
+    conversation = ConversationService.rename_conversation(
+        db=db,
+        conversation_id=conversation_id,
+        title=title
+    )
+
+    if conversation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found"
+        )
+
+    return {
+        "id": conversation.id,
+        "title": conversation.title
+    }

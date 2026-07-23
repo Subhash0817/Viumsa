@@ -24,6 +24,8 @@ function App() {
     useState<Conversation[]>([])
 
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [openMenuId, setOpenMenuId] =
+  useState<number | null>(null)
   async function loadConversations() {
   try {
     const response = await fetch(
@@ -66,6 +68,69 @@ async function openConversation(id: number) {
     console.error('Could not open conversation:', error)
   }
 }
+async function deleteConversation(id: number) {
+  const confirmed = window.confirm(
+  'Delete this conversation? This cannot be undone.'
+  )
+
+  if (!confirmed) return
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/conversations/${id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to delete conversation')
+    }
+
+    if (conversationId === id) {
+      startNewChat()
+    }
+
+    await loadConversations()
+    setOpenMenuId(null)
+  } catch (error) {
+    console.error('Could not delete conversation:', error)
+  }
+}
+async function renameConversation(
+  id: number,
+  currentTitle: string
+) {
+  const newTitle = window.prompt(
+    'Rename conversation',
+    currentTitle
+  )
+
+  if (!newTitle || !newTitle.trim()) return
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/conversations/${id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to rename conversation')
+    }
+
+    await loadConversations()
+    setOpenMenuId(null)
+  } catch (error) {
+    console.error('Could not rename conversation:', error)
+  }
+}
 function startNewChat() {
   setConversationId(null)
   setMessages([])
@@ -106,6 +171,7 @@ function startNewChat() {
 
       const data = await response.json()
       setConversationId(data.conversation_id)
+      await loadConversations()
       setMessages((current) => [
         ...current,
         { role: 'assistant', content: data.response },
@@ -157,32 +223,57 @@ function startNewChat() {
     <p className="sidebar-section-title">Recent</p>
 
     {conversations.map((conversation) => (
-      <button
-        key={conversation.id}
-        className={`conversation-item ${
-  conversationId === conversation.id ? 'active' : ''
-}`}
-        onClick={() => openConversation(conversation.id)}
-      >
-        {conversation.title}
-      </button>
+      <div
+  key={conversation.id}
+  className={`conversation-row ${
+    conversationId === conversation.id ? 'active' : ''
+  }`}
+>
+  <button
+    className="conversation-item"
+    onClick={() => openConversation(conversation.id)}
+  >
+    {conversation.title}
+  </button>
+
+  <button
+    className="conversation-menu-button"
+    onClick={() =>
+      setOpenMenuId(
+        openMenuId === conversation.id ? null : conversation.id
+    )
+  }
+  aria-label="Conversation options"
+  >
+  ⋯
+  </button>
+  {openMenuId === conversation.id && (
+  <div className="conversation-menu">
+    <button
+  onClick={() =>
+    renameConversation(
+      conversation.id,
+      conversation.title
+    )
+  }
+>
+  Rename
+</button>
+
+    <button
+      className="delete-option"
+      onClick={() => deleteConversation(conversation.id)}
+    >
+      Delete
+    </button>
+  </div>
+)}
+</div>
     ))}
   </div>
 )}
 </aside>
-        <header className="chat-header">
-          <div className="chat-brand">
-            <img src={viumsaLogo} alt="Viumsa" />
-            <span>VIUMSA</span>
-          </div>
-
-          <button
-            className="new-chat-button"
-            onClick={startNewChat}
-          >
-            New chat
-          </button>
-        </header>
+        
 
         <section className="conversation">
           {messages.length === 0 ? (

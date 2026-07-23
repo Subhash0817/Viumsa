@@ -44,8 +44,47 @@ class ConversationService:
             .filter(Conversation.id == conversation_id)
             .first()
         )
+    @staticmethod
+    def delete_conversation(
+    db: Session,
+    conversation_id: int
+    ) -> bool:
 
+        conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .first()
+    )
 
+        if conversation is None:
+            return False
+
+        db.delete(conversation)
+        db.commit()
+
+        return True
+    @staticmethod
+    def rename_conversation(
+        db: Session,
+        conversation_id: int,
+        title: str
+    ) -> Conversation | None:
+
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+    )
+
+        if conversation is None:
+            return None
+
+        conversation.title = title
+
+        db.commit()
+        db.refresh(conversation)
+
+        return conversation
     @staticmethod
     def get_messages(
         db: Session,
